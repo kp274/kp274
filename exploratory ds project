@@ -1,0 +1,147 @@
+import pandas as pd 
+import matplotlib.pyplot as plt 
+import numpy as np
+import seaborn as sns
+from scipy.stats import norm
+import sys
+import pandas
+from sklearn.preprocessing import LabelEncoder
+from pandas import DataFrame
+from sklearn.model_selection import train_test_split
+import matplotlib.pyplot as plt
+from sklearn import model_selection
+from sklearn.metrics import classification_report
+from sklearn.tree import DecisionTreeClassifier
+cricket=pd.read_csv("../input/iplcsv/IPL.csv", sep=',')
+
+cricket.head()
+cricket['winner'].value_counts()[0:20]
+
+sns.barplot(list(cricket['winner'].value_counts()[0:10].keys()),list(cricket['winner'].value_counts()[0:10]))
+plt.title("Number of Wins")
+plt.xlabel("Teams")
+plt.ylabel("Wins") 
+plt.xticks(rotation=-90)
+
+cricket.describe()
+
+sns.countplot( x = 'toss_winner', data = cricket, orient = 'h', palette="rainbow")
+plt.xticks(rotation='vertical')
+
+best_players = cricket.player_of_match.value_counts()[:10]
+fig, ax = plt.subplots()
+ax.set_ylim([0,20])
+ax.set_ylabel("Awards")
+ax.set_xlabel("Name of Players")
+ax.set_title("Top player of the match Winners")
+sns.barplot(x = best_players.index, y = best_players, orient='v', palette= "rainbow")
+plt.xticks(rotation = 'vertical')
+plt.show()
+
+cricket['player_of_match'].value_counts()[:20]
+cricket['toss_winner'].value_counts()
+firstbat=cricket[cricket['win_by_runs']!=0]
+
+winners = cricket['toss_winner'] == cricket['winner'] 
+winners.groupby(winners).size()
+
+sns.countplot(cricket['toss_winner'] == cricket['winner'], orient = 'h', palette="Oranges");
+
+firstbat.head()
+
+plt.figure(figsize=(5,5)) 
+plt.hist(firstbat['win_by_runs'],bins=30)
+plt.title("Distribution of the Runs") 
+plt.xlabel("Runs") 
+plt.ylabel("Matches")  
+plt.show()
+
+firstbat['winner'].value_counts()
+
+secondbat = cricket[cricket['win_by_wickets']!=0]
+
+secondbat.head()
+
+secondbat['winner'].value_counts()
+
+plt.figure(figsize=(5,5)) 
+plt.hist(secondbat['win_by_wickets'],bins=30) 
+plt.title("Distribution of the Wickets") 
+plt.xlabel("Wickets") 
+plt.ylabel("Matches")
+plt.show()
+
+fig, ax = plt.subplots()
+ax.set_xlabel("Runs")
+ax.set_title("Wins by Runs")
+sns.boxplot(y = 'winner', x = 'win_by_runs', data=cricket[cricket['win_by_runs']>0], orient = 'h', palette= "Purples")
+plt.show()
+
+
+fig, ax = plt.subplots()
+ax.set_title("Wins by Wickets")
+sns.boxplot(y = 'winner', x = 'win_by_wickets', data=cricket[cricket['win_by_wickets']>0], orient = 'h', palette="Greens")
+plt.show()
+
+plt.figure(figsize=(7,7)) 
+plt.pie(list(cricket['winner'].value_counts()),labels=list(cricket['winner'].value_counts().keys()),autopct='%0.1f%%')
+plt.show()
+
+data = cricket.copy()
+
+
+data['city'].fillna('Dubai',inplace=True)
+data['umpire1'].fillna('Unknown',inplace=True)
+
+data['umpire3'].fillna('Aleem Dar',inplace=True)
+data['umpire2'].fillna('Unknown',inplace=True)
+data['player_of_match'].fillna('Undecided',inplace=True)  
+data['winner'].fillna('Unknown',inplace=True)
+
+null_values_col = data.isnull().sum()
+null_values_col = null_values_col[null_values_col != 0].sort_values(ascending = False).reset_index()
+null_values_col.columns = ["Variable", "Missing"]
+null_values_col.head()
+
+kk = DataFrame(data,columns=['team1', 'team2', 'toss_decision','toss_winner','city', 'venue', 'season', 'win_by_runs', 'win_by_wickets', 'umpire1', 'winner'])
+
+kk['winner'].fillna('Draw', inplace=True)
+kk.replace(['Mumbai Indians','Kolkata Knght Riders','Royal Challengers Bangalore','Deccan Chargers','Chennai Super Kings',
+                 'Rajasthan Royals','Delhi Daredevils','Gujarat Lions','Kings XI Punjab',
+                 'Sunrisers Hyderabad','Rising Pune Supergiants','Kochi Tuskers Kerala','Pune Warriors']
+                ,['MI','KKR','RCB','DC','CSK','RR','DD','GL','KXIP','SRH','RPS','KTK','PW'],inplace=True)
+
+number = {'team1': {'MI':1,'KKR':2,'RCB':3,'DC':4,'CSK':5,'RR':6,'DD':7,'GL':8,'KXIP':9,'SRH':10,'RPS':11,'KTK':12,'PW':13},
+          'team2': {'MI':1,'KKR':2,'RCB':3,'DC':4,'CSK':5,'RR':6,'DD':7,'GL':8,'KXIP':9,'SRH':10,'RPS':11,'KTK':12,'PW':13},
+          'toss_winner': {'MI':1,'KKR':2,'RCB':3,'DC':4,'CSK':5,'RR':6,'DD':7,'GL':8,'KXIP':9,'SRH':10,'RPS':11,'KTK':12,'PW':13},
+          'winner': {'MI':1,'KKR':2,'RCB':3,'DC':4,'CSK':5,'RR':6,'DD':7,'GL':8,'KXIP':9,'SRH':10,'RPS':11,'KTK':12,'PW':13,'Draw':14}}
+kk.replace(number, inplace=True)
+
+kk.dtypes
+encoder = ['team1','team2','toss_decision', 'toss_winner','city', 'venue', 'umpire1', 'winner', 'season']
+le = LabelEncoder()
+for i in encoder:
+    kk[i] = le.fit_transform(kk[i])
+kk.dtypes
+data_without_missing_values = cricket.dropna(axis=1)
+x = kk[['team1', 'team2', 'toss_decision','toss_winner','city', 'venue', 'season', 'win_by_runs', 'win_by_wickets', 'umpire1']]
+y = kk[['winner']]
+
+x_model, x_test, y_model, y_test = train_test_split(x, y, test_size=0.2, random_state=1)
+x_train, x_val, y_train, y_val = train_test_split(x_model, y_model, test_size=0.2, random_state=1)
+
+
+
+dtm = DecisionTreeClassifier()
+dtm.fit(x_train, y_train)
+print(dtm.score(x_train,y_train))
+print(dtm.score(x_val,y_val))
+
+plt.bar(range(len(x_train.columns.values)), dtm.feature_importances_)
+plt.xticks(range(len(x_train.columns.values)),x_train.columns.values, rotation= 90)
+plt.title('Significance of each Characteristic')
+
+mdtm = DecisionTreeClassifier(max_depth = 9, min_samples_leaf = 3)
+mdtm.fit(x_train, y_train)
+print(mdtm.score(x_train,y_train))
+print(mdtm.score(x_val,y_val))
